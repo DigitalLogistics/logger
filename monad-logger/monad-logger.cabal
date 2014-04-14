@@ -1,4 +1,4 @@
-name:                monad-logger
+name:                monad-logger-new
 version:             0.4.0
 synopsis:            A class of monads which can log messages.
 description:         This package uses template-haskell for determining source code locations of messages.
