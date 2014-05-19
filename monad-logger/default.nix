@@ -1,6 +1,6 @@
 { cabal, blazeBuilder, conduit, exceptions, fastLogger, liftedBase
 , monadControl, monadLoops, mtl, resourcet, stm, stmChans, text
-, transformers, transformersBase
+, transformers, transformersBase, conduitExtra
 }:
 
 cabal.mkDerivation (self: {
@@ -9,7 +9,7 @@ cabal.mkDerivation (self: {
   src = ./.;
   buildDepends = [
     blazeBuilder conduit exceptions fastLogger liftedBase monadControl monadLoops
-    mtl resourcet stm stmChans text transformers transformersBase
+    mtl resourcet stm stmChans text transformers transformersBase conduitExtra
   ];
   meta = {
     homepage = "https://github.com/kazu-yamamoto/logger";
