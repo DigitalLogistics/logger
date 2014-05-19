@@ -92,7 +92,11 @@ import Control.Monad.IO.Class (MonadIO (liftIO))
 import Control.Monad.Trans.Resource (MonadResource (liftResourceT), MonadThrow, monadThrow)
 #if MIN_VERSION_resourcet(1,1,0)
 import Control.Monad.Trans.Resource (throwM)
-import Control.Monad.Catch (MonadCatch (..))
+import Control.Monad.Catch (MonadCatch (..)
+#if MIN_VERSION_exceptions(0,6,0)
+    , MonadMask (..)
+#endif
+    )
 #endif
 
 import Control.Monad.Trans.Identity ( IdentityT)
@@ -133,6 +137,10 @@ import Prelude hiding (catch)
 #if !MIN_VERSION_fast_logger(2, 1, 0) && MIN_VERSION_bytestring(0, 10, 2)
 import qualified Data.ByteString.Lazy as L
 import Data.ByteString.Builder (toLazyByteString)
+#endif
+
+#if MIN_VERSION_conduit_extra(1,1,0)
+import Data.Conduit.Lazy (MonadActive, monadActive)
 #endif
 
 data LogLevel = LevelDebug | LevelInfo | LevelWarn | LevelError | LevelOther Text
@@ -278,6 +286,9 @@ instance MonadThrow m => MonadThrow (NoLoggingT m) where
 instance MonadCatch m => MonadCatch (NoLoggingT m) where
     catch (NoLoggingT m) c =
         NoLoggingT $ m `catch` \e -> runNoLoggingT (c e)
+#if MIN_VERSION_exceptions(0,6,0)
+instance MonadMask m => MonadMask (NoLoggingT m) where
+#endif
     mask a = NoLoggingT $ mask $ \u -> runNoLoggingT (a $ q u)
       where q u (NoLoggingT b) = NoLoggingT $ u b
     uninterruptibleMask a =
@@ -286,6 +297,13 @@ instance MonadCatch m => MonadCatch (NoLoggingT m) where
 #else
 instance MonadThrow m => MonadThrow (NoLoggingT m) where
     monadThrow = Trans.lift . monadThrow
+#endif
+
+#if MIN_VERSION_conduit_extra(1,1,0)
+instance MonadActive m => MonadActive (NoLoggingT m) where
+    monadActive = Trans.lift monadActive
+instance MonadActive m => MonadActive (LoggingT m) where
+    monadActive = Trans.lift monadActive
 #endif
 
 instance MonadResource m => MonadResource (NoLoggingT m) where
@@ -433,6 +451,9 @@ instance MonadThrow m => MonadThrow (LoggingT msg m) where
 instance MonadCatch m => MonadCatch (LoggingT msg m) where
   catch (LoggingT m) c =
       LoggingT $ \r -> m r `catch` \e -> runLoggingT (c e) r
+#if MIN_VERSION_exceptions(0,6,0)
+instance MonadMask m => MonadMask (LoggingT m) where
+#endif
   mask a = LoggingT $ \e -> mask $ \u -> runLoggingT (a $ q u) e
     where q u (LoggingT b) = LoggingT (u . b)
   uninterruptibleMask a =
