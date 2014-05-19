@@ -263,31 +263,31 @@ logOtherS = [|\src level msg -> monadLoggerLog $(qLocation >>= liftLoc) src (Lev
 -- | Monad transformer that disables logging.
 --
 -- Since 0.2.4
-newtype NoLoggingT m a = NoLoggingT { runNoLoggingT :: m a }
+newtype NoLoggingT msg m a = NoLoggingT { runNoLoggingT :: m a }
 
-instance Monad m => Functor (NoLoggingT m) where
+instance Monad m => Functor (NoLoggingT msg m) where
     fmap = liftM
 
-instance Monad m => Applicative (NoLoggingT m) where
+instance Monad m => Applicative (NoLoggingT msg m) where
     pure = return
     (<*>) = ap
 
-instance Monad m => Monad (NoLoggingT m) where
+instance Monad m => Monad (NoLoggingT msg m) where
     return = NoLoggingT . return
     NoLoggingT ma >>= f = NoLoggingT $ ma >>= runNoLoggingT . f
 
-instance MonadIO m => MonadIO (NoLoggingT m) where
+instance MonadIO m => MonadIO (NoLoggingT msg m) where
     liftIO = Trans.lift . liftIO
 
 #if MIN_VERSION_resourcet(1,1,0)
-instance MonadThrow m => MonadThrow (NoLoggingT m) where
+instance MonadThrow m => MonadThrow (NoLoggingT msg m) where
     throwM = Trans.lift . throwM
 
-instance MonadCatch m => MonadCatch (NoLoggingT m) where
+instance MonadCatch m => MonadCatch (NoLoggingT msg m) where
     catch (NoLoggingT m) c =
         NoLoggingT $ m `catch` \e -> runNoLoggingT (c e)
 #if MIN_VERSION_exceptions(0,6,0)
-instance MonadMask m => MonadMask (NoLoggingT m) where
+instance MonadMask m => MonadMask (NoLoggingT msg m) where
 #endif
     mask a = NoLoggingT $ mask $ \u -> runNoLoggingT (a $ q u)
       where q u (NoLoggingT b) = NoLoggingT $ u b
@@ -295,41 +295,41 @@ instance MonadMask m => MonadMask (NoLoggingT m) where
         NoLoggingT $ uninterruptibleMask $ \u -> runNoLoggingT (a $ q u)
       where q u (NoLoggingT b) = NoLoggingT $ u b
 #else
-instance MonadThrow m => MonadThrow (NoLoggingT m) where
+instance MonadThrow m => MonadThrow (NoLoggingT msg m) where
     monadThrow = Trans.lift . monadThrow
 #endif
 
 #if MIN_VERSION_conduit_extra(1,1,0)
-instance MonadActive m => MonadActive (NoLoggingT m) where
+instance MonadActive m => MonadActive (NoLoggingT msg m) where
     monadActive = Trans.lift monadActive
-instance MonadActive m => MonadActive (LoggingT m) where
+instance MonadActive m => MonadActive (LoggingT msg m) where
     monadActive = Trans.lift monadActive
 #endif
 
-instance MonadResource m => MonadResource (NoLoggingT m) where
+instance MonadResource m => MonadResource (NoLoggingT msg m) where
     liftResourceT = Trans.lift . liftResourceT
 
-instance MonadBase b m => MonadBase b (NoLoggingT m) where
+instance MonadBase b m => MonadBase b (NoLoggingT msg m) where
     liftBase = Trans.lift . liftBase
 
-instance Trans.MonadTrans NoLoggingT where
+instance Trans.MonadTrans (NoLoggingT msg) where
     lift = NoLoggingT
 
-instance MonadTransControl NoLoggingT where
-    newtype StT NoLoggingT a = StIdent {unStIdent :: a}
+instance MonadTransControl (NoLoggingT msg) where
+    newtype StT (NoLoggingT msg) a = StIdent {unStIdent :: a}
     liftWith f = NoLoggingT $ f $ \(NoLoggingT t) -> liftM StIdent t
     restoreT = NoLoggingT . liftM unStIdent
     {-# INLINE liftWith #-}
     {-# INLINE restoreT #-}
 
-instance MonadBaseControl b m => MonadBaseControl b (NoLoggingT m) where
-     newtype StM (NoLoggingT m) a = StMT' (StM m a)
+instance MonadBaseControl b m => MonadBaseControl b (NoLoggingT msg m) where
+     newtype StM (NoLoggingT msg m) a = StMT' (StM m a)
      liftBaseWith f = NoLoggingT $
          liftBaseWith $ \runInBase ->
              f $ liftM StMT' . runInBase . (\(NoLoggingT r) -> r)
      restoreM (StMT' base) = NoLoggingT $ restoreM base
 
-instance MonadIO m => MonadLogger msg (NoLoggingT m) where
+instance MonadIO m => MonadLogger msg (NoLoggingT msg m) where
     monadLoggerLog _ _ _ _ = return ()
 
 -- |
@@ -383,6 +383,9 @@ instance MonadThrow m => MonadThrow (LoggerT msg m) where
 instance MonadCatch m => MonadCatch (LoggerT msg m) where
   catch (LoggerT m) c =
       LoggerT $ \r -> m r `catch` \e -> runLoggerT (c e) r
+#if MIN_VERSION_exceptions(0,6,0)
+instance MonadMask m => MonadMask (LoggerT msg m) where
+#endif
   mask a = LoggerT $ \e -> mask $ \u -> runLoggerT (a $ q u) e
     where q u (LoggerT b) = LoggerT (u . b)
   uninterruptibleMask a =
@@ -417,9 +420,8 @@ instance MonadBaseControl b m => MonadBaseControl b (LoggerT msg m) where
          liftBaseWith $ \runInBase ->
              f $ liftM StLoggerMT . runInBase . (\(LoggerT r) -> r reader')
      restoreM (StLoggerMT base) = LoggerT $ const $ restoreM base
-
-instance (Monad m, UpgradeMessage msg1 msg2) => MonadLogger msg1 (LoggerT msg2 m) where
-    monadLoggerLog a b c d = LoggerT $ \f -> f a b c (upgradeMessage d)
+--instance (Monad m, UpgradeMessage msg1 msg2) => MonadLogger msg1 (LoggerT msg2 m) where
+--    monadLoggerLog a b c d = LoggerT $ \f -> f a b c (upgradeMessage d)
 
 -- | Monad transformer that adds a new logging function.
 --
@@ -452,7 +454,7 @@ instance MonadCatch m => MonadCatch (LoggingT msg m) where
   catch (LoggingT m) c =
       LoggingT $ \r -> m r `catch` \e -> runLoggingT (c e) r
 #if MIN_VERSION_exceptions(0,6,0)
-instance MonadMask m => MonadMask (LoggingT m) where
+instance MonadMask m => MonadMask (LoggingT msg m) where
 #endif
   mask a = LoggingT $ \e -> mask $ \u -> runLoggingT (a $ q u) e
     where q u (LoggingT b) = LoggingT (u . b)
