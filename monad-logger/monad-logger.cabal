@@ -28,7 +28,7 @@ library
                      , lifted-base
                      , resourcet          >= 0.4       && < 1.2
                      , conduit            >= 1.0       && < 1.2
-                     , fast-logger        >= 2.1       && < 2.2
+                     , fast-logger        >= 2.1       && < 2.3
                      , conduit-extra      >= 1.0       && < 1.2
                      , transformers-base
                      , monad-control
