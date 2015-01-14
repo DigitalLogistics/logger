@@ -316,18 +316,18 @@ instance Trans.MonadTrans (NoLoggingT msg) where
     lift = NoLoggingT
 
 instance MonadTransControl (NoLoggingT msg) where
-    newtype StT (NoLoggingT msg) a = StIdent {unStIdent :: a}
-    liftWith f = NoLoggingT $ f $ \(NoLoggingT t) -> liftM StIdent t
-    restoreT = NoLoggingT . liftM unStIdent
+    type StT (NoLoggingT msg) a = a
+    liftWith f = NoLoggingT $ f $ \(NoLoggingT t) -> t
+    restoreT = NoLoggingT
     {-# INLINE liftWith #-}
     {-# INLINE restoreT #-}
 
 instance MonadBaseControl b m => MonadBaseControl b (NoLoggingT msg m) where
-     newtype StM (NoLoggingT msg m) a = StMT' (StM m a)
+     type StM (NoLoggingT msg m) a = StM m a
      liftBaseWith f = NoLoggingT $
          liftBaseWith $ \runInBase ->
-             f $ liftM StMT' . runInBase . (\(NoLoggingT r) -> r)
-     restoreM (StMT' base) = NoLoggingT $ restoreM base
+             f $ runInBase . (\(NoLoggingT r) -> r)
+     restoreM base = NoLoggingT $ restoreM base
 
 instance MonadIO m => MonadLogger msg (NoLoggingT msg m) where
     monadLoggerLog _ _ _ _ = return ()
@@ -415,11 +415,11 @@ instance MonadTransControl (LoggerT msg) where
 -}
 
 instance MonadBaseControl b m => MonadBaseControl b (LoggerT msg m) where
-     newtype StM (LoggerT msg m) a = StLoggerMT (StM m a)
+     type StM (LoggerT msg m) a = StM m a
      liftBaseWith f = LoggerT $ \reader' ->
          liftBaseWith $ \runInBase ->
-             f $ liftM StLoggerMT . runInBase . (\(LoggerT r) -> r reader')
-     restoreM (StLoggerMT base) = LoggerT $ const $ restoreM base
+             f $ runInBase . (\(LoggerT r) -> r reader')
+     restoreM base = LoggerT $ const $ restoreM base
 --instance (Monad m, UpgradeMessage msg1 msg2) => MonadLogger msg1 (LoggerT msg2 m) where
 --    monadLoggerLog a b c d = LoggerT $ \f -> f a b c (upgradeMessage d)
 
@@ -476,18 +476,18 @@ instance Trans.MonadTrans (LoggingT msg) where
     lift = LoggingT . const
 
 instance MonadTransControl (LoggingT msg) where
-    newtype StT (LoggingT msg) a = StReader {unStReader :: a}
-    liftWith f = LoggingT $ \r -> f $ \(LoggingT t) -> liftM StReader $ t r
-    restoreT = LoggingT . const . liftM unStReader
+    type StT (LoggingT msg) a = a
+    liftWith f = LoggingT $ \r -> f $ \(LoggingT t) -> t r
+    restoreT = LoggingT . const
     {-# INLINE liftWith #-}
     {-# INLINE restoreT #-}
 
 instance MonadBaseControl b m => MonadBaseControl b (LoggingT msg m) where
-     newtype StM (LoggingT msg m) a = StMT (StM m a)
+     type StM (LoggingT msg m) a = StM m a
      liftBaseWith f = LoggingT $ \reader' ->
          liftBaseWith $ \runInBase ->
-             f $ liftM StMT . runInBase . (\(LoggingT r) -> r reader')
-     restoreM (StMT base) = LoggingT $ const $ restoreM base
+             f $ runInBase . (\(LoggingT r) -> r reader')
+     restoreM base = LoggingT $ const $ restoreM base
 
 instance (MonadIO m) => MonadLogger msg (LoggingT msg m) where
     monadLoggerLog a b c d = LoggingT $ \f -> liftIO $ f a b c d

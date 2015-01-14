@@ -1,20 +1,19 @@
-{ cabal, blazeBuilder, conduit, exceptions, fastLogger, liftedBase
-, monadControl, monadLoops, mtl, resourcet, stm, stmChans, text
-, transformers, transformersBase, conduitExtra
+{ mkDerivation, base, blaze-builder, bytestring, conduit
+, conduit-extra, exceptions, fast-logger, lifted-base
+, monad-control, monad-loops, mtl, resourcet, stdenv, stm
+, stm-chans, template-haskell, text, transformers
+, transformers-base
 }:
-
-cabal.mkDerivation (self: {
+mkDerivation {
   pname = "monad-logger-new";
-  version = "0.4";
+  version = "0.4.0";
   src = ./.;
   buildDepends = [
-    blazeBuilder conduit exceptions fastLogger liftedBase monadControl monadLoops
-    mtl resourcet stm stmChans text transformers transformersBase conduitExtra
+    base blaze-builder bytestring conduit conduit-extra exceptions
+    fast-logger lifted-base monad-control monad-loops mtl resourcet stm
+    stm-chans template-haskell text transformers transformers-base
   ];
-  meta = {
-    homepage = "https://github.com/kazu-yamamoto/logger";
-    description = "A class of monads which can log messages";
-    license = self.stdenv.lib.licenses.mit;
-    platforms = self.ghc.meta.platforms;
-  };
-})
+  homepage = "https://github.com/kazu-yamamoto/logger";
+  description = "A class of monads which can log messages";
+  license = stdenv.lib.licenses.mit;
+}

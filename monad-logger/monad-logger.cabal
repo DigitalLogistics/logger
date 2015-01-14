@@ -31,7 +31,7 @@ library
                      , fast-logger        >= 2.1       && < 2.3
                      , conduit-extra      >= 1.0       && < 1.2
                      , transformers-base
-                     , monad-control
+                     , monad-control >= 1.0.0
                      , monad-loops
                      , mtl
                      , bytestring
